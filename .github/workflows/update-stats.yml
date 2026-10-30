@@ -1,0 +1,45 @@
+
+name: Update NFL Perfect Props
+
+on:
+  schedule:
+    # Tuesdays at 18:00 UTC (10 AM PST / 11 AM PDT)
+    - cron: '0 18 * 9-12,1-2 2'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nfl-perfect-props-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python -m pip install 'pandas>=2.2,<3'
+
+      - name: Rebuild perfect-hit data
+        run: python scripts/update_stats.py
+
+      - name: Commit changes, if any
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Update NFL Perfect Props data'
+            git push
+          fi
